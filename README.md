@@ -47,7 +47,7 @@ People sign in once with their email and code, as usual.
 After changing a file, upload the folder again, following step 1. If an old version sticks on a phone, open the app, pull down to refresh, or close and reopen it.
 
 ## Good to know
-- **Sign-in:** the app keeps people signed in the same way the website does. iPhones may ask them to sign in again after a few weeks of not using it.
+- **Sign-in:** people sign in once and stay signed in (for a year after they last opened the app). The shell keeps a backup of the sign-in, so an iPhone clearing website storage doesn't sign them out. **Sign out** inside the app removes it everywhere.
 - **Pay via UPI app:** this works as it does in Safari or Chrome.
   - **Share on WhatsApp:** it may download the image instead of opening the share menu. Attach the downloaded image in WhatsApp.
 - **Nothing is stored in the shell:** all data stays in your Google Sheet.

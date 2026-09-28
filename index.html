@@ -53,6 +53,17 @@
     window.addEventListener('online', function () { net(); if (!frame.src) frame.src = base + q; });
     window.addEventListener('offline', net); net();
     if (navigator.onLine) frame.src = base + q;
+    // Keep people signed in: hold a backup of the app's sign-in token (the app asks for it when it starts).
+    // Only the Apps Script page (googleusercontent.com) may read or change it.
+    var KEY = 'em-token', fromApp = function (o) { return /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(o); };
+    window.addEventListener('message', function (e) {
+      if (!fromApp(e.origin) || !e.data) return;
+      try {
+        if (e.data.type === 'em-hello') e.source.postMessage({ type: 'em-shell', token: localStorage.getItem(KEY) || '' }, e.origin);
+        else if (e.data.type === 'em-token') { if (e.data.token) localStorage.setItem(KEY, String(e.data.token)); else localStorage.removeItem(KEY); }
+      } catch (err) { /* storage blocked – the app still works, people just sign in again */ }
+    });
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
     if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   })();
 </script>

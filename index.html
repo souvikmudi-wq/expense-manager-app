@@ -35,7 +35,7 @@
 <body>
 <div id="splash"><img src="icons/icon-192.png" alt=""><b>Expense Manager</b><div class="bar"></div><small id="splash-msg">Opening…</small></div>
 <iframe id="app" title="Expense Manager"
-        allow="clipboard-write; clipboard-read; camera; autoplay; fullscreen; web-share"
+        allow="clipboard-write; clipboard-read; camera; geolocation; autoplay; fullscreen; web-share"
         referrerpolicy="strict-origin-when-cross-origin"></iframe>
 <div id="offline">You're offline. Expense Manager needs the internet. <button onclick="location.reload()">Retry</button></div>
 <script src="config.js"></script>
@@ -60,6 +60,13 @@
       if (!fromApp(e.origin) || !e.data) return;
       try {
         if (e.data.type === 'em-hello') e.source.postMessage({ type: 'em-shell', token: localStorage.getItem(KEY) || '' }, e.origin);
+        else if (e.data.type === 'em-geo') {          // the app asks for the location (Apps Script pages can't)
+          var src = e.source, org = e.origin, reply = function (m) { try { src.postMessage(m, org); } catch (x) {} };
+          if (!navigator.geolocation) return reply({ type: 'em-geo-result', ok: false, code: 2 });
+          navigator.geolocation.getCurrentPosition(function (p) { reply({ type: 'em-geo-result', ok: true, lat: p.coords.latitude, lon: p.coords.longitude }); },
+            function (err) { reply({ type: 'em-geo-result', ok: false, code: err && err.code || 0 }); },
+            { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 });
+        }
         else if (e.data.type === 'em-token') { if (e.data.token) localStorage.setItem(KEY, String(e.data.token)); else localStorage.removeItem(KEY); }
       } catch (err) { /* storage blocked – the app still works, people just sign in again */ }
     });

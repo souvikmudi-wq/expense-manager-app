@@ -1,5 +1,5 @@
 // Keeps the app shell (this page, icons) available offline. The app itself always loads live from Google.
-const CACHE = 'expense-manager-shell-v5';
+const CACHE = 'expense-manager-shell-v6';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

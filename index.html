@@ -30,6 +30,14 @@
   #offline { display: none; position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 3; background: #fdecea; color: #8a1c1c; border: 1px solid #f3b4ae; border-radius: 12px; padding: 10px 14px; text-align: center; }
   #offline button { margin-left: 8px; font: inherit; border-radius: 8px; border: 1px solid #c62828; background: #fff; color: #c62828; padding: 4px 10px; }
   .hide { opacity: 0; pointer-events: none; }
+  #geo-ask { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 4; max-width: 560px; margin: 0 auto;
+             background: #fff; color: #1d2433; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 14px 16px; }
+  #geo-ask[hidden] { display: none; }
+  #geo-ask .gq { display: flex; gap: 12px; align-items: flex-start; } #geo-ask .gi { font-size: 26px; line-height: 1; }
+  #geo-ask small { display: block; color: #667085; margin-top: 2px; }
+  #geo-ask .gb { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  #geo-ask button { font: inherit; border-radius: 10px; border: 1px solid #d0d5dd; background: #fff; color: #1d2433; padding: 9px 14px; cursor: pointer; }
+  #geo-ask button.yes { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -37,6 +45,11 @@
 <iframe id="app" title="Expense Manager"
         allow="clipboard-write; clipboard-read; camera; geolocation; autoplay; fullscreen; web-share"
         referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<div id="geo-ask" role="dialog" aria-live="polite" hidden>
+  <div class="gq"><span class="gi" aria-hidden="true">📍</span><div><b>Share your location for the route?</b>
+    <small>Used only to calculate this route and never saved. Your browser will ask next — choose <b>Allow</b>.</small></div></div>
+  <div class="gb"><button id="geo-no" type="button">Not now</button><button id="geo-yes" type="button" class="yes">📍 Share my location</button></div>
+</div>
 <div id="offline">You're offline. Expense Manager needs the internet. <button onclick="location.reload()">Retry</button></div>
 <script src="config.js"></script>
 <script>
@@ -55,17 +68,25 @@
     if (navigator.onLine) frame.src = base + q;
     // Keep people signed in: hold a backup of the app's sign-in token (the app asks for it when it starts).
     // Only the Apps Script page (googleusercontent.com) may read or change it.
+    var sheet = document.getElementById('geo-ask'), geoReply = null;
+    document.getElementById('geo-yes').addEventListener('click', function () {
+      if (!geoReply) return (sheet.hidden = true);
+      this.disabled = true; var btn = this; btn.textContent = 'Getting location…';
+      navigator.geolocation.getCurrentPosition(function (p) { btn.disabled = false; btn.textContent = '📍 Share my location'; if (geoReply) geoReply({ type: 'em-geo-result', ok: true, lat: p.coords.latitude, lon: p.coords.longitude }); },
+        function (err) { btn.disabled = false; btn.textContent = '📍 Share my location'; if (geoReply) geoReply({ type: 'em-geo-result', ok: false, code: err && err.code || 0 }); },
+        { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 });
+    });
+    document.getElementById('geo-no').addEventListener('click', function () { if (geoReply) geoReply({ type: 'em-geo-result', ok: false, code: 'cancel' }); else sheet.hidden = true; });
     var KEY = 'em-token', fromApp = function (o) { return /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(o); };
     window.addEventListener('message', function (e) {
       if (!fromApp(e.origin) || !e.data) return;
       try {
         if (e.data.type === 'em-hello') e.source.postMessage({ type: 'em-shell', token: localStorage.getItem(KEY) || '' }, e.origin);
         else if (e.data.type === 'em-geo') {          // the app asks for the location (Apps Script pages can't)
-          var src = e.source, org = e.origin, reply = function (m) { try { src.postMessage(m, org); } catch (x) {} };
-          if (!navigator.geolocation) return reply({ type: 'em-geo-result', ok: false, code: 2 });
-          navigator.geolocation.getCurrentPosition(function (p) { reply({ type: 'em-geo-result', ok: true, lat: p.coords.latitude, lon: p.coords.longitude }); },
-            function (err) { reply({ type: 'em-geo-result', ok: false, code: err && err.code || 0 }); },
-            { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 });
+          var src = e.source, org = e.origin;
+          geoReply = function (m) { geoReply = null; sheet.hidden = true; try { src.postMessage(m, org); } catch (x) {} };
+          if (!navigator.geolocation) return geoReply({ type: 'em-geo-result', ok: false, code: 2 });
+          sheet.hidden = false; document.getElementById('geo-yes').focus();   // browsers only ask after a tap on THIS page
         }
         else if (e.data.type === 'em-token') { if (e.data.token) localStorage.setItem(KEY, String(e.data.token)); else localStorage.removeItem(KEY); }
       } catch (err) { /* storage blocked – the app still works, people just sign in again */ }
